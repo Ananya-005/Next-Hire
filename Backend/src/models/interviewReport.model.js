@@ -1,37 +1,6 @@
-const mongoose=require("mongoose");
-/**
- * - job description schema:String
- * - resume test: String
- * - Self description: String
- * 
- * -matchScore:Number
- * 
- * - Technical questions:[{
- *     question: "",
- *     intention:"",
- *     answer:"",
- * }]
- * 
- * -Behavioral questions:[{
- *     question: "",
- *     intention:"",
- *     answer:"",
- * }]
- * 
- * -Skill gaps:[{
- *     skill:"",
- *     severity:{
- *     type:String,
- *     enum;["low","medium","high"]
- * } 
- * }]
- * 
- * -Preparation plan:{[
- *     day:Number,
- *     focus: String,
- *     tasks:[String]
- * ]}
- */
+const mongoose = require('mongoose');
+
+
 const technicalQuestionSchema = new mongoose.Schema({
     question: {
         type: String,
@@ -120,8 +89,7 @@ const interviewReportSchema = new mongoose.Schema({
         ref: "users"
     },
     title: {
-        type: String,
-        required: [ true, "Job title is required" ]
+        type: String
     }
 }, {
     timestamps: true
@@ -130,4 +98,4 @@ const interviewReportSchema = new mongoose.Schema({
 
 const interviewReportModel = mongoose.model("InterviewReport", interviewReportSchema);
 
-module.exports = interviewReportModel;
+module.exports = interviewReportModel;  

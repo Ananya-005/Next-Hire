@@ -2,11 +2,11 @@ const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
 const puppeteer = require("puppeteer")
+const { Type } = require("@google/genai");
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_GENAI_API_KEY
 })
-
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
@@ -32,27 +32,178 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
+const GeminiInterviewReportSchema = {
+  type: Type.OBJECT,
+  properties: {
+    matchScore: {
+      type: Type.NUMBER,
+      description:
+        "A score between 0 and 100 indicating how well the candidate's profile matches the job description."
+    },
+
+    technicalQuestions: {
+      type: Type.ARRAY,
+      description:
+        "Technical questions that can be asked in the interview along with their intention and how to answer them.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          question: {
+            type: Type.STRING,
+            description:
+              "The technical question that can be asked in the interview."
+          },
+          intention: {
+            type: Type.STRING,
+            description:
+              "The intention of the interviewer behind asking this question."
+          },
+          answer: {
+            type: Type.STRING,
+            description:
+              "How the candidate should answer this question, what points to cover, and the recommended approach."
+          }
+        },
+        required: ["question", "intention", "answer"]
+      }
+    },
+
+    behavioralQuestions: {
+      type: Type.ARRAY,
+      description:
+        "Behavioral questions that can be asked in the interview along with their intention and how to answer them.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          question: {
+            type: Type.STRING,
+            description:
+              "The behavioral question that can be asked in the interview."
+          },
+          intention: {
+            type: Type.STRING,
+            description:
+              "The intention of the interviewer behind asking this question."
+          },
+          answer: {
+            type: Type.STRING,
+            description:
+              "How the candidate should answer this behavioral question."
+          }
+        },
+        required: ["question", "intention", "answer"]
+      }
+    },
+
+    skillGaps: {
+      type: Type.ARRAY,
+      description:
+        "List of skill gaps in the candidate's profile along with their severity.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          skill: {
+            type: Type.STRING,
+            description:
+              "The skill that is missing or insufficient in the candidate's profile."
+          },
+          severity: {
+            type: Type.STRING,
+            enum: ["low", "medium", "high"],
+            description:
+              "Severity of this skill gap."
+          }
+        },
+        required: ["skill", "severity"]
+      }
+    },
+
+    preparationPlan: {
+      type: Type.ARRAY,
+      description:
+        "A day-wise preparation plan for the candidate.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          day: {
+            type: Type.NUMBER,
+            description:
+              "The day number starting from 1."
+          },
+          focus: {
+            type: Type.STRING,
+            description:
+              "Primary focus area for this day."
+          },
+          tasks: {
+            type: Type.ARRAY,
+            description:
+              "List of tasks for this day.",
+            items: {
+              type: Type.STRING
+            }
+          }
+        },
+        required: ["day", "focus", "tasks"]
+      }
+    },
+
+    title: {
+      type: Type.STRING,
+      description:
+        "The title of the job for which this report is generated."
+    }
+  },
+
+  required: [
+    "matchScore",
+    "technicalQuestions",
+    "behavioralQuestions",
+    "skillGaps",
+    "preparationPlan",
+    "title"
+  ]
+};
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
+    const prompt = `You are an expert interview preparation assistant and technical recruiter.
 
-    const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
-`
+Analyze the candidate's resume, self-description, and the job description.
+
+Generate:
+- Overall match score (0-100)
+- Technical interview questions
+- Behavioral interview questions
+- Skill gaps with severity
+- A practical day-wise preparation plan
+- Job title
+
+Base the analysis only on the provided information. Do not invent experience or skills that are not present.
+
+Resume:
+${resume}
+
+Self Description:
+${selfDescription}
+
+Job Description:
+${jobDescription}`;
 
     const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
-    })
+    model: "gemini-2.5-flash",
+    contents: prompt,
+    config: {
+        responseMimeType: "application/json",
+        responseSchema: GeminiInterviewReportSchema
+  }
+});
 
-    return JSON.parse(response.text)
+const parsed = JSON.parse(response.text);
 
+const report = interviewReportSchema.parse(parsed);
 
+return report;
 }
 
 
@@ -113,4 +264,4 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
 
 }
 
-module.exports = { generateInterviewReport, generateResumePdf }
+module.exports = { generateInterviewReport, generateResumePdf,generatePdfFromHtml }
