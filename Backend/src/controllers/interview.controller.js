@@ -119,18 +119,22 @@ async function getAllInterviewReportsController(req, res) {
 /**
  * @description Controller to generate resume PDF based on user self description, resume and job description.
  */
-async function generateResumePdfController(req, res) {
-    const { interviewReportId } = req.params
 
-    const interviewReport = await interviewReportModel.findById(interviewReportId)
+async function generateResumePdfController(req, res) {
+  try {
+    const { interviewReportId } = req.params;
+
+    const interviewReport = await interviewReportModel.findOne({
+      _id: interviewReportId,
+      user: req.user.id,
+    });
 
     if (!interviewReport) {
-        return res.status(404).json({
-            message: "Interview report not found."
-        })
+      return res.status(404).json({
+        message: "Interview report not found",
+      });
     }
-
-    const { resume, jobDescription, selfDescription } = interviewReport
+     const { resume, jobDescription, selfDescription } = interviewReport
 
     const pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription })
 
@@ -140,6 +144,19 @@ async function generateResumePdfController(req, res) {
     })
 
     res.send(pdfBuffer)
+
+    // Continue with your existing logic:
+    // generate resume HTML using AI
+    // convert HTML -> PDF using Puppeteer
+    // return PDF
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Failed to generate resume PDF",
+    });
+  }
 }
 
 module.exports = { generateInterViewReportController, getInterviewReportByIdController, getAllInterviewReportsController, generateResumePdfController }
